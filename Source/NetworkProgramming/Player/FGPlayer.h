@@ -56,10 +56,10 @@ public:
 	void MultiCast_SendLocation(const FVector& LocationToSend);
 
 	UFUNCTION(Server, Unreliable)
-	void Server_SendRotation(const FQuat& RotationToSend);
+	void Server_SendRotation(const FRotator& RotationToSend);
 
 	UFUNCTION(NetMulticast, Unreliable)
-	void MultiCast_SendRotation(const FQuat& RotationToSend);
+	void MultiCast_SendRotation(const FRotator& RotationToSend);
 
 private:
 	
