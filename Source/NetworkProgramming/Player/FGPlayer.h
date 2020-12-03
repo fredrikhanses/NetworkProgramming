@@ -56,10 +56,10 @@ public:
 	void MultiCast_SendLocation(const FVector& LocationToSend);
 
 	UFUNCTION(Server, Unreliable)
-	void Server_SendRotation(const FRotator& RotationToSend);
+	void Server_SendRotation(const FQuat& RotationToSend);
 
 	UFUNCTION(NetMulticast, Unreliable)
-	void MultiCast_SendRotation(const FRotator& RotationToSend);
+	void MultiCast_SendRotation(const FQuat& RotationToSend);
 
 private:
 	
@@ -74,7 +74,13 @@ private:
 	float MovementVelocity = 0.0f;
 	float Yaw = 0.0f;
 
+	float CurrentDeltaTime = 0.0f;
+	float NetMessageTimeCount = 0.0f;
+
 	bool bBrake = false;
+
+	FVector TargetLocation = FVector::ZeroVector;
+	FQuat TargetRotation = FQuat::Identity;
 
 	UPROPERTY(EditAnywhere, Category = Collision)
 	USphereComponent* CollisionComponent;
