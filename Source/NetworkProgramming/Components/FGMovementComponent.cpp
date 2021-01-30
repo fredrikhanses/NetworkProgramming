@@ -6,9 +6,7 @@
 void UFGMovementComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
 	FacingRotationCurrent = FQuat::Slerp(FacingRotationCurrent.Quaternion(), FacingRotationTarget.Quaternion(), FacingRotationSpeed * DeltaTime).Rotator();
-
 	if (FacingRotationCurrent.Equals(FacingRotationTarget))
 	{
 		FacingRotationCurrent = FacingRotationTarget;
@@ -24,18 +22,14 @@ FFGFrameMovement UFGMovementComponent::CreateFrameMovement() const
 void UFGMovementComponent::Move(FFGFrameMovement& FrameMovement)
 {
 	Hit.Reset();
-
 	FVector Delta = GetMovementDelta(FrameMovement);
 	MoveUpdatedComponent(Delta, FacingRotationCurrent, true, &Hit);
-
 	if (Hit.bBlockingHit && FVector::DotProduct(FVector::UpVector, Hit.Normal) > 0.0f)
 	{
 		AccumulatedGravity = 0.0f;
 		Delta = GetMovementDelta(FrameMovement);
 	}
-
 	SlideAlongSurface(Delta, 1.0f - Hit.Time, Hit.Normal, Hit);
-
 	FrameMovement.Hit = Hit;
 	FrameMovement.FinalLocation = UpdatedComponent->GetComponentLocation();
 }
@@ -66,7 +60,6 @@ void UFGMovementComponent::Internal_SetFacingRotation(const FRotator& InFacingRo
 	NewRotation.Roll = 0.0f;
 	NewRotation.Pitch = 0.0f;
 	FacingRotationTarget = NewRotation;
-
 	if (InRotationSpeed < 0.0f)
 	{
 		FacingRotationCurrent = NewRotation;

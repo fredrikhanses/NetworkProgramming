@@ -19,12 +19,10 @@ void UFGNetDebugWidget::UpdateNetworkSimulationSettings(const FFGBlueprintNetwor
 			PacketSimulation.PktIncomingLagMax = InPackets.MaxLatency;
 			PacketSimulation.PktIncomingLoss = InPackets.PacketLossPercentage;
 			World->GetNetDriver()->SetPacketSimulationSettings(PacketSimulation);
-
 			FFGBlueprintNetworkSimulationSettingsText SimulationSettingsText;
 			SimulationSettingsText.MaxLatency = FText::FromString(FString::FromInt(InPackets.MaxLatency));
 			SimulationSettingsText.MinLatency = FText::FromString(FString::FromInt(InPackets.MinLatency));
 			SimulationSettingsText.PacketLossPercentage = FText::FromString(FString::FromInt(InPackets.PacketLossPercentage));
-
 			BP_OnUpdateNetworkSimulationSettings(SimulationSettingsText);
 		}
 	}
@@ -33,7 +31,6 @@ void UFGNetDebugWidget::UpdateNetworkSimulationSettings(const FFGBlueprintNetwor
 void UFGNetDebugWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
-
 	if (APlayerController* PC = GetOwningPlayer())
 	{
 		if (APlayerState* PlayerState = PC->GetPlayerState<APlayerState>())
