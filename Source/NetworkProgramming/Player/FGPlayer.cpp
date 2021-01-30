@@ -14,6 +14,8 @@
 #include "../FGPickup.h"
 #include "../FGRocket.h"
 
+const static float MaxMoveDeltaTime = 0.125f;
+
 AFGPlayer::AFGPlayer()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -42,6 +44,8 @@ void AFGPlayer::BeginPlay()
 		DebugMenuInstance->SetVisibility(ESlateVisibility::Collapsed);
 	}
 	SpawnRockets();
+	BP_OnNumberRocketsChanged(NumberRockets);
+	OriginalMeshOffset = MeshComponent->GetRelativeLocation();
 }
 
 void AFGPlayer::Tick(float DeltaTime)
@@ -52,10 +56,11 @@ void AFGPlayer::Tick(float DeltaTime)
 	{
 		return;
 	}
+	FFGFrameMovement FrameMovement = MovementComponent->CreateFrameMovement();
 	if (IsLocallyControlled())
 	{
+		ClientTimeStamp += DeltaTime;
 		const float MaxVelocity = PlayerSettings->MaxVelocity;
-		const float Acceleration = PlayerSettings->Acceleration;
 		const float Friction = IsBraking() ? PlayerSettings->BrakingFriction : PlayerSettings->DefaultFriction;
 		const float Alpha = FMath::Clamp(FMath::Abs(MovementVelocity / (PlayerSettings->MaxVelocity * 0.75f)), 0.0f, 1.0f);
 		const float TurnSpeed = FMath::InterpEaseInOut(0.0f, PlayerSettings->TurnSpeedDefault, Alpha, 5.0f);
@@ -63,53 +68,25 @@ void AFGPlayer::Tick(float DeltaTime)
 		Yaw += (MovementDirection * TurnSpeed) * DeltaTime;
 		FQuat WantedFacingDirection = FQuat(FVector::UpVector, FMath::DegreesToRadians(Yaw));
 		MovementComponent->SetFacingRotation(WantedFacingDirection, 10.5f);
-		FFGFrameMovement FrameMovement = MovementComponent->CreateFrameMovement();
-		MovementVelocity += Forward * Acceleration * DeltaTime;
-		MovementVelocity = FMath::Clamp(MovementVelocity, -MaxVelocity, MaxVelocity);
+		AddMovementVelocity(DeltaTime); 
 		MovementVelocity *= FMath::Pow(Friction, DeltaTime);
 		MovementComponent->ApplyGravity();
 		FrameMovement.AddDelta(GetActorForwardVector() * MovementVelocity * DeltaTime);
+		MovementComponent->Move(FrameMovement); 
+		Server_SendMovement(GetActorLocation(), ClientTimeStamp, Forward, GetActorRotation().Yaw);
+	}
+	else
+	{
+		const float Friction = IsBraking() ? PlayerSettings->BrakingFriction : PlayerSettings->DefaultFriction;
+		MovementVelocity *= FMath::Pow(Friction, DeltaTime);
+		FrameMovement.AddDelta(GetActorForwardVector() * MovementVelocity * DeltaTime);
 		MovementComponent->Move(FrameMovement);
-		Server_SendLocation(GetActorLocation());
-		Server_SendYaw(MovementComponent->GetFacingRotation().Yaw);
+		if (bPerformNetworkSmoothing)
+		{
+			const FVector NewRelativeLocation = FMath::VInterpTo(MeshComponent->GetRelativeLocation(), OriginalMeshOffset, LastCorrectionDelta, 0.75f);
+			MeshComponent->SetRelativeLocation(NewRelativeLocation, false, nullptr, ETeleportType::TeleportPhysics);
+		}
 	}
-	else
-	{
-		const FVector NewLocation = FMath::VInterpTo(GetActorLocation(), ReplicatedLocation, DeltaTime, 10.0f);
-		SetActorLocation(NewLocation);
-		MovementComponent->SetFacingRotation(FRotator(0.0f, ReplicatedYaw, 0.0f));
-		SetActorRotation(MovementComponent->GetFacingRotation());
-	}
-	/*const float MaxVelocity = PlayerSettings->MaxVelocity;
-	const float Acceleration = PlayerSettings->Acceleration;
-	const float Friction = IsBraking() ? PlayerSettings->BrakingFriction : PlayerSettings->DefaultFriction;
-	const float Alpha = FMath::Clamp(FMath::Abs(MovementVelocity / (PlayerSettings->MaxVelocity * 0.75f)), 0.0f, 1.0f);
-	const float TurnSpeed = FMath::InterpEaseInOut(0.0f, PlayerSettings->TurnSpeedDefault, Alpha, 5.0f);
-	const float MovementDirection = MovementVelocity > 0.0f ? Turn : -Turn;
-	Yaw += (MovementDirection * TurnSpeed) * DeltaTime;
-	FQuat WantedFacingDirection = FQuat(FVector::UpVector, FMath::DegreesToRadians(Yaw));
-	MovementComponent->SetFacingRotation(WantedFacingDirection, 10.5f);
-	if (IsLocallyControlled())
-	{
-		MovementComponent->SetFacingRotation(WantedFacingDirection);
-	}
-	else
-	{
-		SetActorLocation(FMath::Lerp(GetActorLocation(), TargetLocation, DeltaTime * 5.0f));
-		MovementComponent->SetFacingRotation(FMath::Lerp(GetActorRotation().Quaternion(), TargetRotation, DeltaTime * 5.0f));
-	}
-	FFGFrameMovement FrameMovement = MovementComponent->CreateFrameMovement();
-	MovementVelocity += Forward * Acceleration * DeltaTime;
-	MovementVelocity = FMath::Clamp(MovementVelocity, -MaxVelocity, MaxVelocity);
-	MovementVelocity *= FMath::Pow(Friction, DeltaTime);
-	MovementComponent->ApplyGravity();
-	FrameMovement.AddDelta(GetActorForwardVector() * MovementVelocity * DeltaTime);
-	MovementComponent->Move(FrameMovement);
-	if (IsLocallyControlled())
-	{
-		Server_SendLocation(GetActorLocation());
-		Server_SendRotation(GetActorRotation().Quaternion());
-	}*/
 }
 
 void AFGPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -154,7 +131,6 @@ void AFGPlayer::Client_OnPickupRockets_Implementation(int32 PickedUpRockets)
 
 void AFGPlayer::Server_SendLocation_Implementation(const FVector& LocationToSend)
 {
-	//MultiCast_SendLocation(LocationToSend);
 	ReplicatedLocation = LocationToSend;
 }
 
@@ -167,7 +143,6 @@ void AFGPlayer::MultiCast_SendLocation_Implementation(const FVector& LocationToS
 {
 	if (!IsLocallyControlled())
 	{
-		//TargetLocation = LocationToSend;
 		SetActorLocation(LocationToSend);
 	}
 }
@@ -294,6 +269,18 @@ AFGRocket* AFGPlayer::GetFreeRocket() const
 	return nullptr;
 }
 
+void AFGPlayer::AddMovementVelocity(float DeltaTime)
+{
+	if (!ensure(PlayerSettings != nullptr))
+	{
+		return;
+	}
+	const float MaxVelocity = PlayerSettings->MaxVelocity;
+	const float Acceleration = PlayerSettings->Acceleration;
+	MovementVelocity += Forward * Acceleration * DeltaTime;
+	MovementVelocity = FMath::Clamp(MovementVelocity, -MaxVelocity, MaxVelocity);
+}
+
 void AFGPlayer::Cheat_IncreaseRockets(int32 InNumberRockets)
 {
 	if(IsLocallyControlled())
@@ -304,12 +291,33 @@ void AFGPlayer::Cheat_IncreaseRockets(int32 InNumberRockets)
 
 void AFGPlayer::Server_SendMovement_Implementation(const FVector& ClientLocation, float TimeStamp, float ClientForward, float ClientYaw)
 {
-
+	MultiCast_SendMovement(ClientLocation, TimeStamp, ClientForward, ClientYaw);
 }
 
 void AFGPlayer::MultiCast_SendMovement_Implementation(const FVector& InClientLocation, float TimeStamp, float ClientForward, float ClientYaw)
 {
-
+	if (!IsLocallyControlled())
+	{
+		Forward = ClientForward;
+		const float DeltaTime = FMath::Min(TimeStamp - ClientTimeStamp, MaxMoveDeltaTime);
+		ClientTimeStamp = TimeStamp;
+		AddMovementVelocity(DeltaTime);
+		MovementComponent->SetFacingRotation(FRotator(0.0f, ClientYaw, 0.0f));
+		const FVector DeltaDifference = InClientLocation - GetActorLocation();
+		if (DeltaDifference.SizeSquared() > FMath::Square(40.0f))
+		{
+			if (bPerformNetworkSmoothing)
+			{
+				const FScopedPreventAttachedComponentMove PreventMeshMove(MeshComponent);
+				MovementComponent->UpdatedComponent->SetWorldLocation(InClientLocation, false, nullptr, ETeleportType::TeleportPhysics);
+				LastCorrectionDelta = DeltaTime;
+			}
+			else
+			{
+				SetActorLocation(InClientLocation);
+			}
+		}
+	}
 }
 
 void AFGPlayer::Server_FireRocket_Implementation(AFGRocket* NewRocket, const FVector& RocketStartLocation, const FRotator& RocketFacingRotation)

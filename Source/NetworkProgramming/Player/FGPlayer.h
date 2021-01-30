@@ -81,6 +81,7 @@ private:
 	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const;
 	FVector GetRocketStartLocation() const;
 	AFGRocket* GetFreeRocket() const;
+	void AddMovementVelocity(float DeltaTime);
 private:
 	UPROPERTY(EditAnywhere, Category = Collision)
 	USphereComponent* CollisionComponent;
@@ -105,7 +106,8 @@ private:
 	UPROPERTY(Replicated)
 	FVector ReplicatedLocation;
 	UPROPERTY(EditAnywhere, Category = Network)
-	bool bPerformNetworkSmoothing = false;
+	bool bPerformNetworkSmoothing = true;
+	FVector OriginalMeshOffset = FVector::ZeroVector;
 	int32 MaxActiveRockets = 3;
 	float FireCooldownElapsed = 0.0f;
 	int32 ServerNumberRockets = 0;
@@ -120,6 +122,7 @@ private:
 	bool bBrake = false;
 	float ClientTimeStamp = 0.0f;
 	float LastCorrectionDelta = 0.0f;
+	float ServerTimeStamp = 0.0f;
 	FVector TargetLocation = FVector::ZeroVector;
 	FQuat TargetRotation = FQuat::Identity;
 };
