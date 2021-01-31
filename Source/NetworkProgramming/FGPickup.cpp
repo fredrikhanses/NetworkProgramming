@@ -67,10 +67,19 @@ void AFGPickup::OverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* O
 	if (AFGPlayer* Player = Cast<AFGPlayer>(OtherActor))
 	{
 		Player->OnPickup(this);
-		bPickedUp = true;
-		SphereComponent->SetCollisionProfileName(TEXT("NoCollision"));
-		RootComponent->SetVisibility(false, true);
-		GetWorldTimerManager().SetTimer(ReActivateHandle, this, &AFGPickup::ReActivatePickup, ReActivateTime, false);
-		SetActorTickEnabled(false);
 	}
+}
+
+void AFGPickup::RestartPickup()
+{
+	bPickedUp = true;
+	SphereComponent->SetCollisionProfileName(TEXT("NoCollision"));
+	SetVisibility(false);
+	GetWorldTimerManager().SetTimer(ReActivateHandle, this, &AFGPickup::ReActivatePickup, ReActivateTime, false);
+	SetActorTickEnabled(false);
+}
+
+void AFGPickup::SetVisibility(bool bVisible)
+{
+	RootComponent->SetVisibility(bVisible, true);
 }

@@ -33,21 +33,24 @@ public:
 	void Server_SendLocation(const FVector& LocationToSend);
 	UFUNCTION(Server, Reliable)
 	void Server_OnPickup(AFGPickup* Pickup);
-	UFUNCTION(Client, Reliable)
-	void Client_OnPickupRockets(int32 PickedUpRockets);
+	UFUNCTION(Server, Reliable)
+	void Server_OnHit(uint32 DamageToSend);
+	UFUNCTION(NetMulticast, Reliable)
+	void MultiCast_OnPickup(AFGPickup* Pickup);
+	UFUNCTION(NetMulticast, Reliable)
+	void MultiCast_OnHit(uint32 DamageToSend);
 	UFUNCTION(Server, Unreliable)
 	void Server_SendYaw(float NewYaw);
-	UFUNCTION(NetMulticast, Unreliable)
-	void MultiCast_SendLocation(const FVector& LocationToSend);
-	UFUNCTION(Server, Unreliable)
-	void Server_SendRotation(const FQuat& RotationToSend);
-	UFUNCTION(NetMulticast, Unreliable)
-	void MultiCast_SendRotation(const FQuat& RotationToSend);
 	UFUNCTION(BlueprintPure)
 	int32 GetNumRockets() const { return NumberRockets; }
 	UFUNCTION(BlueprintImplementableEvent, Category = Player, meta = (DisplayName = "On Number Rockets Changed"))
 	void BP_OnNumberRocketsChanged(int32 NewNumberRockets);
+	UFUNCTION(BlueprintImplementableEvent, Category = Player, meta = (DisplayName = "On Health Changed"))
+	void BP_OnHealthChanged(int32 NewHealth);
+	UFUNCTION(BlueprintImplementableEvent, Category = Player, meta = (DisplayName = "On Death"))
+	void BP_OnEnd(bool Winner);
 	void OnPickup(AFGPickup* Pickup);
+	void OnHit(AFGRocket* Rocket);
 	void ShowDebugMenu();
 	void HideDebugMenu();
 	int32 GetNumberActiveRockets() const;
@@ -68,7 +71,9 @@ private:
 	UFUNCTION(NetMulticast, Reliable)
 	void MultiCast_FireRocket(AFGRocket* NewRocket, const FVector& RocketStartLocation, const FRotator& RocketFacingRotation);
 	UFUNCTION(Client, Reliable)
-	void Client_RemoveRocket(AFGRocket* RocketToRemove);
+	void Client_RemoveRocket(AFGRocket* RocketToRemove, uint32 InNumberRockets);
+	UFUNCTION(NetMulticast, Reliable)
+	void MultiCast_UpdateStat(AFGPickup* Pickup, uint32 InStat);
 	UFUNCTION(BlueprintCallable)
 	void Cheat_IncreaseRockets(int32 InNumberRockets);
 	void Handle_Acceleration(float Value);
@@ -82,7 +87,11 @@ private:
 	FVector GetRocketStartLocation() const;
 	AFGRocket* GetFreeRocket() const;
 	void AddMovementVelocity(float DeltaTime);
+	void Die();
+	void Explode();
 private:
+	UPROPERTY(EditAnywhere, Category = VFX)
+	UParticleSystem* Explosion = nullptr;
 	UPROPERTY(EditAnywhere, Category = Collision)
 	USphereComponent* CollisionComponent;
 	UPROPERTY(EditAnywhere, Category = Mesh)
@@ -112,6 +121,8 @@ private:
 	float FireCooldownElapsed = 0.0f;
 	int32 ServerNumberRockets = 0;
 	int32 NumberRockets = 0;
+	int32 ServerHealth = 100;
+	int32 Health = 100;
 	bool bShowDebugMenu = false;
 	float Forward = 0.0f;
 	float Turn = 0.0f;
@@ -123,6 +134,4 @@ private:
 	float ClientTimeStamp = 0.0f;
 	float LastCorrectionDelta = 0.0f;
 	float ServerTimeStamp = 0.0f;
-	FVector TargetLocation = FVector::ZeroVector;
-	FQuat TargetRotation = FQuat::Identity;
 };

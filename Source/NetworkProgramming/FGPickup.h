@@ -23,6 +23,8 @@ public:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void Tick(float DeltaTime) override;
+	void SetVisibility(bool bVisible);
+	void RestartPickup();
 	UPROPERTY(VisibleDefaultsOnly, Category = Collision)
 	USphereComponent* SphereComponent;
 	UPROPERTY(VisibleDefaultsOnly, Category = Mesh)
@@ -31,6 +33,8 @@ public:
 	EFGPickupType PickupType = EFGPickupType::Rocket;
 	UPROPERTY(EditAnywhere)
 	int32 NumberRockets = 5;
+	UPROPERTY(EditAnywhere)
+	int32 HealthValue = 10;
 	UPROPERTY(EditAnywhere)
 	float ReActivateTime = 5.0f;
 private:

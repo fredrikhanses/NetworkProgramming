@@ -3,6 +3,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
+#include "Player/FGPlayer.h"
 
 AFGRocket::AFGRocket()
 {
@@ -48,6 +49,10 @@ void AFGRocket::Tick(float DeltaTime)
 	GetWorld()->LineTraceSingleByChannel(Hit, StartLocation, EndLocation, ECC_Visibility, CachedCollisionQueryParams);
 	if (Hit.bBlockingHit)
 	{
+		if (AFGPlayer* Player = Cast<AFGPlayer>(Hit.Actor))
+		{
+			Player->OnHit(this);
+		}
 		Explode();
 	}
 	if (LifeTimeElapsed < 0.0f)

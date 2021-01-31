@@ -21,8 +21,9 @@ public:
 	bool IsFree() const { return bIsFree; }
 	void Explode();
 	void MakeFree();
-private:
 	void SetRocketVisibility(bool bVisible);
+	uint32 Damage = 10;
+private:
 	FCollisionQueryParams CachedCollisionQueryParams;
 	UPROPERTY(EditAnywhere, Category = VFX)
 	UParticleSystem* Explosion = nullptr;
